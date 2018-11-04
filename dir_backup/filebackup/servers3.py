@@ -5,10 +5,12 @@ import sys
 import Queue
 import struct
 import json
+import os
 
 settings = {
         'hostip': '0.0.0.0',
         'port':10001,
+        'to_dir':'./to_dir'
     }
 
 message_queues = {}
@@ -34,6 +36,16 @@ def get_filename_len(filename):
     filename_len = len(json.dumps(filename_dict).encode('utf-8'))  # 将字典转换成字符串
     return filename_len
 
+def create_dir(path):
+ # 去除首位空格
+    path=path.strip()
+    path=path.rstrip("/")
+    if not os.path.exists(path):
+        os.makedirs(path) 
+        return True
+    else:
+        # 如果目录存在则不创建，并提示目录已存在
+        return False
 
 def start_recv_file_server(settings):
     #创建套接字并设置该套接字为非阻塞模式
@@ -107,7 +119,16 @@ def start_recv_file_server(settings):
                         
                         if s not in outputs:
                             outputs.append(s)
-                        f = open('recv_file.mkv', 'wb')
+                            
+                        if not os.path.exists(settings['to_dir']):
+                            create_dir(settings['to_dir'])
+                        fn = head_info['filename'].split('\\')[-1]
+                        pathname = head_info['filename'].split(fn)[0]  
+                        pathname = pathname.replace('\\','/')
+                        if pathname:
+                            create_dir(settings['to_dir']+pathname)
+                        #f = open('recv_file.mkv', 'wb')
+                        f = open(settings['to_dir']+'/'+pathname+'/'+fn, 'wb')
                     else:
                         print (sys.stderr,'closing..',client_address)
                         if s in outputs:
