@@ -6,13 +6,26 @@ import hashlib
 import datetime
 import sys,os
 import pickle
+import platform
+
+
 
 settings = {
         'hostip': '192.168.0.50',
         'port':10001,
-        'from_dir':'D:\\Users\\Administrator\\eclipse-workspace\\nlp\\data_handle',
+        'from_dir':'D:\\Users\\Administrator\\eclipse-workspace\\nlp\\data_handle', #windows path
+        #'from_dir':'/root/linux_socket/filebackup/from_dir', #linux path
         'transmit_record':'transmit_status_file.record'
     }
+
+def get_os_type():
+    sysstr = platform.system()
+    if(sysstr =="Windows"):
+        return 'Windows'
+    elif(sysstr == "Linux"):
+        return 'Linux'
+    else:
+        return 'Other'
 
 def getfilemd5(filename):
     if not os.path.isfile(filename):
@@ -36,8 +49,13 @@ def test_getfilemd5():
     
 
 def get_head_info(filename, settings):
-    settings['from_dir'] = settings['from_dir'].rstrip("\\")  #去除末尾的\\
-    file_abs_path = settings['from_dir'] + '\\' + filename
+    if get_os_type() == 'Windows':
+        settings['from_dir'] = settings['from_dir'].rstrip("\\")  #去除末尾的\\
+        file_abs_path = settings['from_dir'] + '\\' + filename
+    else:
+        settings['from_dir'] = settings['from_dir'].rstrip("/")  #去除末尾的\\
+        file_abs_path = settings['from_dir'] + '/' + filename
+        
     filesize_bytes = os.path.getsize(file_abs_path) # 得到文件的大小,字节
     #print (filesize_bytes)
     head = {
@@ -55,14 +73,22 @@ def get_filename_len(filename):
     return filename_len
 
 def get_file_size(send_filename, settings):
-    settings['from_dir'] = settings['from_dir'].rstrip("\\")  #去除末尾的\\
-    file_abs_path = settings['from_dir'] + '\\' + send_filename
+    if get_os_type() == 'Windows':
+        settings['from_dir'] = settings['from_dir'].rstrip("\\")  #去除末尾的\\
+        file_abs_path = settings['from_dir'] + '\\' + send_filename
+    else:
+        settings['from_dir'] = settings['from_dir'].rstrip("/")  #去除末尾的\\
+        file_abs_path = settings['from_dir'] + '/' + send_filename
     return os.path.getsize(file_abs_path) # 得到文件的大小,字节
 
 
 def judge_file_exist(send_filename, settings):
-    settings['from_dir'] = settings['from_dir'].rstrip("\\")  #去除末尾的\\
-    file_abs_path = settings['from_dir'] + '\\' + send_filename
+    if get_os_type() == 'Windows':
+        settings['from_dir'] = settings['from_dir'].rstrip("\\")  #去除末尾的\\
+        file_abs_path = settings['from_dir'] + '\\' + send_filename
+    else:
+        settings['from_dir'] = settings['from_dir'].rstrip("/")  #去除末尾的\\
+        file_abs_path = settings['from_dir'] + '/' + send_filename
     return  os.path.exists(file_abs_path)
        
 def send_file(send_filename, settings):
@@ -88,8 +114,12 @@ def send_file(send_filename, settings):
     filesize_bytes = get_file_size(send_filename, settings) # 得到文件的大小,字节
     head_info_len = filesize_bytes
     
-    settings['from_dir'] = settings['from_dir'].rstrip("\\")  #去除末尾的\\
-    file_abs_path = settings['from_dir'] + '\\' + send_filename
+    if get_os_type() == 'Windows':
+        settings['from_dir'] = settings['from_dir'].rstrip("\\")  #去除末尾的\\
+        file_abs_path = settings['from_dir'] + '\\' + send_filename
+    else:
+        settings['from_dir'] = settings['from_dir'].rstrip("/")  #去除末尾的\\
+        file_abs_path = settings['from_dir'] + '/' + send_filename 
     f = open(file_abs_path, 'rb') 
     while True:
         data = f.read(1024)
@@ -171,8 +201,13 @@ def get_transmit_status_by_dir(settings):
     for filename in file_list:
         dict_tmp = {}
         dict_tmp['filename'] =  filename
-        dict_tmp['md5sum'] = get_file_md5(adspath_name+'\\'+filename)
-        dict_tmp['filesize_bytes'] = os.path.getsize(adspath_name+'\\'+filename)
+        if get_os_type() == 'Windows':
+            dict_tmp['md5sum'] = get_file_md5(adspath_name+'\\'+filename)
+            dict_tmp['filesize_bytes'] = os.path.getsize(adspath_name+'\\'+filename)
+        else:
+            dict_tmp['md5sum'] = get_file_md5(adspath_name+'/'+filename)
+            dict_tmp['filesize_bytes'] = os.path.getsize(adspath_name+'/'+filename)
+
         dict_tmp['file_is_already_transmit'] = False
         dict_tmp['file_is_already_update'] = False
         file_head_info_list.append(dict_tmp)

@@ -122,9 +122,11 @@ def start_recv_file_server(settings):
                             
                         if not os.path.exists(settings['to_dir']):
                             create_dir(settings['to_dir'])
-                        fn = head_info['filename'].split('\\')[-1]
-                        pathname = head_info['filename'].split(fn)[0]  
-                        pathname = pathname.replace('\\','/')
+                        
+                        
+                        adbfilename = head_info['filename'].replace('\\','/')
+                        fn = adbfilename.split('/')[-1]
+                        pathname = adbfilename.split(fn)[0] 
                         if pathname:
                             create_dir(settings['to_dir']+pathname)
                         #f = open('recv_file.mkv', 'wb')
