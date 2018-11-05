@@ -1,0 +1,3 @@
+git rm to_dir/*
+git commit -m "删除多余的文件"
+git push 
