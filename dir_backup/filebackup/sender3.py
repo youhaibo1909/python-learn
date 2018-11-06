@@ -13,8 +13,8 @@ import platform
 settings = {
         'hostip': '192.168.0.50',
         'port':10001,
-        'from_dir':'D:\\Users\\Administrator\\eclipse-workspace\\nlp\\data_handle', #windows path
-        #'from_dir':'/root/linux_socket/filebackup/from_dir', #linux path
+        #'from_dir':'D:\\Users\\Administrator\\eclipse-workspace\\nlp\\data_handle', #windows path
+        'from_dir':'/root/linux_socket/filebackup/from_dir', #linux path
         'transmit_record':'transmit_status_file.record'
     }
 
@@ -48,7 +48,8 @@ def test_getfilemd5():
     print ('运行时间：%ds'%((endtime-starttime).seconds) )
     
 
-def get_head_info(filename, settings):
+def get_head_info(current_file_info, settings):
+    filename = current_file_info['filename']
     if get_os_type() == 'Windows':
         settings['from_dir'] = settings['from_dir'].rstrip("\\")  #去除末尾的\\
         file_abs_path = settings['from_dir'] + '\\' + filename
@@ -61,6 +62,7 @@ def get_head_info(filename, settings):
     head = {
         'filename': filename,
         'filesize_bytes': filesize_bytes,
+        'md5sum':current_file_info['md5sum']
     }
     head_info = json.dumps(head)  # 将字典转换成字符串
     head_info_len = struct.pack('i', len(head_info)) #  将字符串的长度打包
@@ -91,7 +93,10 @@ def judge_file_exist(send_filename, settings):
         file_abs_path = settings['from_dir'] + '/' + send_filename
     return  os.path.exists(file_abs_path)
        
-def send_file(send_filename, settings):
+def send_file(current_file_info, settings):
+    
+    ret = 0
+    send_filename = current_file_info['filename']
     if not judge_file_exist(send_filename, settings): #文件不存在立即返回
         return 1
     
@@ -100,7 +105,7 @@ def send_file(send_filename, settings):
     
     s.connect(( settings['hostip'], settings['port'] ))
     
-    head_info, head_info_len = get_head_info(send_filename, settings)
+    head_info, head_info_len = get_head_info(current_file_info, settings)
     s.send(head_info_len)  # 发送head_info的长度
     s.send(head_info.encode('utf-8'))  #发送头信息先dumps，然后encode
     
@@ -109,8 +114,8 @@ def send_file(send_filename, settings):
     recv_head_info = json.loads(recv_filename.decode('utf-8'))
     if recv_head_info['filename'] != send_filename:
         return 2
-    print ('recv filename is:', recv_head_info, type(recv_head_info))   
-    
+    #print ('recv filename is:', recv_head_info, type(recv_head_info))   
+    print('-->start--->:')
     filesize_bytes = get_file_size(send_filename, settings) # 得到文件的大小,字节
     head_info_len = filesize_bytes
     
@@ -126,13 +131,17 @@ def send_file(send_filename, settings):
         if not data: #如果文件为空的情况
             break
         s.send(data)
-        s.recv(4)
+        server_ret_value = s.recv(4)
         head_info_len = head_info_len - 1024 
-        if head_info_len < 0:
+        if head_info_len <= 0:
+            server_ret_value = struct.unpack('i', server_ret_value)[0] 
+            if server_ret_value == 0:
+                ret = 0
+            else:
+                ret = 1
             break;
-        
     s.close()
-    return 0
+    return ret
 
 
 def test_file_dir():
@@ -195,7 +204,7 @@ def get_file_md5(filename):
 def get_transmit_status_by_dir(settings):
     adspath_name = os.path.abspath(settings['from_dir'])
     file_list = get_file_name_list(adspath_name)
-    print (len(file_list), file_list)
+    #print (len(file_list), file_list)  #需要拷贝的所有的文件的长度，以及文件名称列表
     
     file_head_info_list = []
     for filename in file_list:
@@ -270,19 +279,18 @@ def main_start():
     transmit_file_info_lists = []
     if os.path.exists(settings['transmit_record']):
         transmit_file_info_lists = read_from_file_byjson(settings['transmit_record'])
-    print (current_file_info_lists)
-    print (transmit_file_info_lists)
+    #print (current_file_info_lists)
+    #print (transmit_file_info_lists)
     for current_file_info in current_file_info_lists:
         if not judge_file_already_transmit(current_file_info, transmit_file_info_lists): #文件没有传输
-            print (current_file_info['filename'])  #i['filename']为相对路径+文件名称
-            #fn = '0007Python1.mkv' 
+            #print (current_file_info['filename'])  #为相对路径+文件名称
             fn = current_file_info['filename']
-            ret = send_file(fn, settings)
+            ret = send_file(current_file_info, settings)  #传输文件
             if ret == 0:
-                print ('[%s] transmission is ok!, ret is:%d'% (fn, ret))
+                print ('-->transmission is ok! [%s] , ret is:%d \n'% (fn, ret))
                 update_transmit_file_info_lists(current_file_info, transmit_file_info_lists)    
             else:
-                print ('[%s] transmission is not ok!, ret is:%d'% (fn, ret))
+                print ('++>transmission is not ok![%s] , ret is:%d \n'% (fn, ret))
             
 main_start()
 

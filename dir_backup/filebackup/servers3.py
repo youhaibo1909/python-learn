@@ -1,11 +1,11 @@
 #-*- coding: UTF-8 -*-
 import select
 import socket
-import sys
+import os, sys
 import Queue
 import struct
 import json
-import os
+import hashlib
 
 settings = {
         'hostip': '0.0.0.0',
@@ -90,10 +90,10 @@ def start_recv_file_server(settings):
         for s in readable: 
             if s is server:
                 connection,client_address = s.accept()
-                print (sys.stderr,'connection from',client_address)
                 connection.setblocking(0)#设置非阻塞
                 inputs.append(connection)
                 #message_queues[connection] = Queue.Queue()
+                print ('--->start connection from: [%s]' % str(client_address) )
             else:
                 if judge_is_new_connect(s):
                     head_len_container = s.recv(4)  #接收struct.pack的头长度。
@@ -103,10 +103,9 @@ def start_recv_file_server(settings):
                             head_info = ''
                             try:
                                 recv_str = s.recv(head_info_len)  # 接收长度为head_len的报头内容的信息
-                                print ('recv filename is:', recv_str)
+                                print ('recv file info is:%s' % recv_str)
                             except:
-                                
-                                print ('recv file head is err.')
+                                #print ('recv file head is err.')
                                 continue
                                 
                             head_info = head_info + recv_str
@@ -115,7 +114,7 @@ def start_recv_file_server(settings):
                         head_info = json.loads(head_info.decode('utf-8'))
                         
                         file_head_info_list[s]= head_info
-                        print ('start recv newfile, head_info is:', head_info)
+                        #print ('start recv newfile, head_info is:', head_info)
                         
                         if s not in outputs:
                             outputs.append(s)
@@ -131,6 +130,8 @@ def start_recv_file_server(settings):
                             create_dir(settings['to_dir']+pathname)
                         #f = open('recv_file.mkv', 'wb')
                         f = open(settings['to_dir']+'/'+pathname+'/'+fn, 'wb')
+                        f_myhash = hashlib.md5()
+                        f_len = 0
                     else:
                         print (sys.stderr,'closing..',client_address)
                         if s in outputs:
@@ -144,18 +145,29 @@ def start_recv_file_server(settings):
                     data = s.recv(1024)
                     if data:
                         #print ('filename is ', json.loads(filename.decode('utf-8'))['filename'] )
-                         #接收文件
+                        #接收文件
                         f.write(data)
-                        s.send(struct.pack('i',1))
+                        f_myhash.update(data)
+                        f_len = f_len + len(data)
+                        if f_len >= head_info['filesize_bytes']: #接收完成
+                            recv_md5sum = f_myhash.hexdigest()
+                            #print ('recv md5sum is [%s]' % recv_md5sum)
+                            #print ('orig md5sum is [%s]' % head_info['md5sum'])
+                            if recv_md5sum == head_info['md5sum']: 
+                                s.send(struct.pack('i',0)) #当文件传输的md5sum校验对的时候，代表文件传输正确
+                                print ('[%s] Receive complete, md5sum is ok.' % (head_info['filename']) )
+                            else:
+                                s.send(struct.pack('i',1))
+                        else:
+                            s.send(struct.pack('i',1))
                     else:
-                        print ('closed.',client_address)
+                        print ("++>closed.[%s]\n" % str(client_address))
                         if s in outputs:
                             outputs.remove(s)
                         inputs.remove(s)
                         s.close()
                         f.close()
-                   
-                        
+
         #处理可写的套接字
         '''
                     在发送缓冲区中取出响应的数据，发往客户端。
