@@ -12,11 +12,10 @@ import platform
 
 settings = {
         'hostip': '192.168.0.50',
-        'port':10001,
+        'port':10002,
         'from_dir':'D:\\Users\\Administrator\\eclipse-workspace\\nlp\\data_handle', #windows path
-        #'from_dir':'G:\\iso\\centos', #windows
+        #'from_dir':'G:\\iso\\centos',
         #'from_dir':'/root/linux_socket/filebackup/from_dir', #linux path
-        #'from_dir':'/root/spice-protocol-0.12.13', #linux path
         'transmit_record':'transmit_status_file.record'
     }
 

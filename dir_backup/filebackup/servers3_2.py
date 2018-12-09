@@ -2,7 +2,7 @@
 import select
 import socket
 import os, sys
-#import Queue
+import Queue
 import struct
 import json
 import hashlib
@@ -10,23 +10,14 @@ import platform
 
 settings = {
         'hostip': '0.0.0.0',
-        'port':10001,
-        'to_dir':'./to_dir' #linux path
-        #'to_dir':'D:\\mytest' #windows path
+        'port':10002,
+        'to_dir':'./to_dir'
     }
 
 message_queues = {}
 file_head_info_list = {}
 
-def get_os_type():
-    sysstr = platform.system()
-    if(sysstr =="Windows"):
-        return 'Windows'
-    elif(sysstr == "Linux"):
-        return 'Linux'
-    else:
-        return 'Other'
-    
+
 def get_head_info(recv_socket):
     head_len_container = recv_socket.recv(4)   
     
@@ -132,12 +123,9 @@ def start_recv_file_server(settings):
                         if not os.path.exists(settings['to_dir']):
                             create_dir(settings['to_dir'])
                         
-                        if get_os_type() == 'Linux':
-                            adbfilename = head_info['filename'].replace('\\','/')
-                            fn = adbfilename.split('/')[-1]
-                        else:
-                            adbfilename = head_info['filename'].replace('/','\\')
-                            fn = adbfilename.split('\\')[-1]
+                        
+                        adbfilename = head_info['filename'].replace('\\','/')
+                        fn = adbfilename.split('/')[-1]
                         pathname = adbfilename.split(fn)[0] 
                         if pathname:
                             create_dir(settings['to_dir']+pathname)
